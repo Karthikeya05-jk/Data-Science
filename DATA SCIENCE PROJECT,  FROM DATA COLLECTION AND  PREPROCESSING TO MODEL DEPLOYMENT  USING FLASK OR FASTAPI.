@@ -1,0 +1,64 @@
+import pandas as pd
+import pickle
+from flask import Flask, request, jsonify
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestClassifier
+
+# Step 1: Data Collection
+url = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"
+data = pd.read_csv(url)
+
+# Step 2: Data Preprocessing
+features = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"]
+target = "Survived"
+data = data[features + [target]].dropna()
+
+X = data[features]
+y = data[target]
+
+# Identify numerical and categorical features
+num_features = ["Age", "SibSp", "Parch", "Fare"]
+cat_features = ["Pclass", "Sex", "Embarked"]
+
+# Create preprocessing pipeline
+num_pipeline = Pipeline([
+    ('scaler', StandardScaler())
+])
+
+cat_pipeline = Pipeline([
+    ('encoder', OneHotEncoder(handle_unknown='ignore'))
+])
+
+preprocessor = ColumnTransformer([
+    ('num', num_pipeline, num_features),
+    ('cat', cat_pipeline, cat_features)
+])
+
+# Step 3: Model Training
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+model = Pipeline([
+    ('preprocessor', preprocessor),
+    ('classifier', RandomForestClassifier(n_estimators=100, random_state=42))
+])
+
+model.fit(X_train, y_train)
+
+# Save the trained model
+with open("model.pkl", "wb") as f:
+    pickle.dump(model, f)
+
+# Step 4: Deploy API with Flask
+app = Flask(__name__)
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    data = request.json
+    df = pd.DataFrame([data])
+    prediction = model.predict(df)[0]
+    return jsonify({"Survived": int(prediction)})
+
+if __name__ == '__main__':
+    app.run(debug=True)
