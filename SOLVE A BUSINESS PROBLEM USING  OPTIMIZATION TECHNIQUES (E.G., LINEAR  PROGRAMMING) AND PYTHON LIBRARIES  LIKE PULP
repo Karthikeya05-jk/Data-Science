@@ -1,0 +1,31 @@
+import pulp
+import pandas as pd
+
+# Define the problem
+problem = pulp.LpProblem("Maximize_Profit", pulp.LpMaximize)
+
+# Decision variables
+x1 = pulp.LpVariable("Product_A", lowBound=0, cat='Continuous')
+x2 = pulp.LpVariable("Product_B", lowBound=0, cat='Continuous')
+
+# Objective function (maximize profit)
+problem += 50 * x1 + 40 * x2, "Total_Profit"
+
+# Constraints (resource limitations)
+problem += 5 * x1 + 4 * x2 <= 200, "Material_Availability"
+problem += 3 * x1 + 2 * x2 <= 120, "Labor_Availability"
+
+# Solve the problem
+problem.solve()
+
+# Output results
+results = {
+    "Variable": [v.name for v in problem.variables()],
+    "Optimal_Value": [v.varValue for v in problem.variables()]
+}
+results_df = pd.DataFrame(results)
+
+# Display solution
+print("Optimal Production Levels:")
+print(results_df)
+print(f"Total Profit: ${pulp.value(problem.objective)}")
