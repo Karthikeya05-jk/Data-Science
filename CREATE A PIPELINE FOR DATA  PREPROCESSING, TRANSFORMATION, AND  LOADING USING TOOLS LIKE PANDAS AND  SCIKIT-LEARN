@@ -1,0 +1,50 @@
+import pandas as pd
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+
+def extract_data(file_path):
+    """Loads data from a CSV file."""
+    return pd.read_csv("/content/heart_attack_dataset.csv")
+
+def preprocess_data(df):
+    """Preprocesses the data: handles missing values, encodes categorical features, and scales numerical features."""
+    
+
+    numerical_features = df.select_dtypes(include=['int64', 'float64']).columns
+    categorical_features = df.select_dtypes(include=['object']).columns
+    
+   
+    numerical_pipeline = Pipeline([
+        ('imputer', SimpleImputer(strategy='mean')),
+        ('scaler', StandardScaler())
+    ])
+    
+    categorical_pipeline = Pipeline([
+        ('imputer', SimpleImputer(strategy='most_frequent')),
+        ('encoder', OneHotEncoder(handle_unknown='ignore'))
+    ])
+    
+    preprocessor = ColumnTransformer([
+        ('num', numerical_pipeline, numerical_features),
+        ('cat', categorical_pipeline, categorical_features)
+    ])
+    
+    processed_data = preprocessor.fit_transform(df)
+    return processed_data, preprocessor
+
+def load_data(processed_data, output_path):
+    """Saves processed data to a CSV file."""
+    pd.DataFrame(processed_data).to_csv(output_path, index=False)
+
+if __name__ == "__main__":
+    input_file = "raw_data.csv"  
+    output_file = "processed_data.csv"
+    
+    
+    raw_data = extract_data(input_file)
+    processed_data, transformer = preprocess_data(raw_data)
+    load_data(processed_data, output_file)
+    
+    print("ETL process completed. Processed data saved to", output_file)
